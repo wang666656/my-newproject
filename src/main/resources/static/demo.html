@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能导诊访问记录演示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .smart-guide-btn {
+            background-color: #28a745;
+            font-size: 18px;
+            padding: 15px 30px;
+        }
+        .smart-guide-btn:hover {
+            background-color: #1e7e34;
+        }
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+            width: 200px;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            min-width: 100px;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .access-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        .access-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 12px;
+        }
+        .access-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>智能导诊访问记录演示</h1>
+    <p>这是一个演示页面，展示如何使用智能导诊访问记录接口。</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <input type="text" id="userIdInput" placeholder="输入用户ID" value="user123">
+        <br><br>
+        <button class="button smart-guide-btn" onclick="accessSmartGuide()">
+            🤖 点击进入智能导诊
+        </button>
+    </div>
+
+    <div id="accessResult" class="result" style="display: none;"></div>
+</div>
+
+<div class="container">
+    <h2>访问统计</h2>
+    <div class="stats">
+        <div class="stat-item">
+            <div class="stat-number" id="totalCount">0</div>
+            <div>总访问次数</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number" id="userCount">0</div>
+            <div>当前用户访问次数</div>
+        </div>
+    </div>
+
+    <button class="button" onclick="loadStatistics()">刷新统计</button>
+    <div id="statsResult" class="result" style="display: none;"></div>
+</div>
+
+<div class="container">
+    <h2>访问记录查询</h2>
+    <div>
+        <input type="text" id="queryUserId" placeholder="用户ID（可选）">
+        <input type="text" id="startTime" placeholder="开始时间 (yyyy-MM-dd)">
+        <input type="text" id="endTime" placeholder="结束时间 (yyyy-MM-dd)">
+        <button class="button" onclick="loadAccessRecords()">查询记录</button>
+    </div>
+
+    <div id="accessList" class="access-list" style="display: none;"></div>
+    <div id="queryResult" class="result" style="display: none;"></div>
+</div>
+
+<script>
+    // 记录智能导诊访问
+    async function accessSmartGuide() {
+        const userId = document.getElementById('userIdInput').value.trim();
+        if (!userId) {
+            alert('请输入用户ID');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/access/record', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    outpatientID: userId
+                })
+            });
+
+            const result = await response.json();
+
+            const resultDiv = document.getElementById('accessResult');
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = JSON.stringify(result, null, 2);
+
+            if (response.ok) {
+                // 自动刷新统计信息
+                setTimeout(() => {
+                    loadStatistics();
+                    loadAccessRecords();
+                }, 500);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('访问记录失败: ' + error.message);
+        }
+    }
+
+    // 加载访问统计
+    async function loadStatistics() {
+        const userId = document.getElementById('userIdInput').value.trim();
+
+        try {
+            const url = userId ? `/api/access/statistics?outpatientID=${userId}` : '/api/access/statistics';
+            const response = await fetch(url);
+            const result = await response.json();
+
+            const statsDiv = document.getElementById('statsResult');
+            statsDiv.style.display = 'block';
+            statsDiv.textContent = JSON.stringify(result, null, 2);
+
+            // 更新统计数字
+            document.getElementById('totalCount').textContent = result.totalAccessCount || 0;
+            document.getElementById('userCount').textContent = result.userAccessCount || 0;
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('加载统计失败: ' + error.message);
+        }
+    }
+
+    // 加载访问记录
+    async function loadAccessRecords() {
+        const queryUserId = document.getElementById('queryUserId').value.trim();
+        const startTime = document.getElementById('startTime').value.trim();
+        const endTime = document.getElementById('endTime').value.trim();
+
+        let url = '/api/access/list?page=0&size=20';
+        if (queryUserId) url += `&outpatientID=${queryUserId}`;
+        if (startTime) url += `&startTime=${startTime}`;
+        if (endTime) url += `&endTime=${endTime}`;
+
+        try {
+            const response = await fetch(url);
+            const result = await response.json();
+
+            const queryDiv = document.getElementById('queryResult');
+            queryDiv.style.display = 'block';
+            queryDiv.textContent = JSON.stringify(result, null, 2);
+
+            // 显示访问记录列表
+            const listDiv = document.getElementById('accessList');
+            listDiv.style.display = 'block';
+            listDiv.innerHTML = '';
+
+            if (result.content && result.content.length > 0) {
+                result.content.forEach(record => {
+                    const item = document.createElement('div');
+                    item.className = 'access-item';
+                    item.innerHTML = `
+                            <strong>ID:</strong> ${record.id} |
+                            <strong>用户:</strong> ${record.outpatientID} |
+                            <strong>时间:</strong> ${new Date(record.accessTime).toLocaleString()} |
+                            <strong>IP:</strong> ${record.ipAddress}
+                        `;
+                    listDiv.appendChild(item);
+                });
+            } else {
+                listDiv.innerHTML = '<div class="access-item">暂无访问记录</div>';
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('加载访问记录失败: ' + error.message);
+        }
+    }
+
+    // 页面加载时自动加载统计信息
+    window.onload = function() {
+        loadStatistics();
+        loadAccessRecords();
+    };
+</script>
+</body>
+</html>
